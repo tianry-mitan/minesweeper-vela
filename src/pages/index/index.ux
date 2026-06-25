@@ -1,0 +1,594 @@
+<template>
+  <div class="page">
+    <!-- 顶部状态栏 -->
+    <div class="header">
+      <div class="info-item">
+        <text class="icon">M</text>
+        <text class="value {{ remainingMines < 0 ? 'danger' : '' }}">{{ remainingMines }}</text>
+      </div>
+      <div class="reset-btn" onclick="initGame">
+        <text class="face-symbol">{{ faceSymbol }}</text>
+      </div>
+      <div class="info-item">
+        <text class="icon">T</text>
+        <text class="value">{{ timerDisplay }}</text>
+      </div>
+    </div>
+
+    <!-- 跳转按钮 -->
+    <div class="nav-area">
+      <text class="nav-btn" onclick="goToAbout">...</text>
+    </div>
+
+    <!-- 游戏棋盘 -->
+    <div class="board-wrapper">
+      <div class="board">
+        <block for="(i, row) in grid">
+          <div class="board-row">
+            <block for="(j, cell) in row">
+              <div class="cell {{ getCellClass(cell) }}"
+                   onclick="onCellUp(i, j)"
+                   onlongpress="onCellLong(i, j)">
+                <text class="cell-content {{ getContentClass(cell) }}">{{ getCellContent(cell) }}</text>
+              </div>
+            </block>
+          </div>
+        </block>
+      </div>
+    </div>
+
+    <!-- 底部控制栏 -->
+    <div class="footer">
+      <div class="flag-btn {{ flagMode ? 'flag-active' : '' }}" onclick="toggleFlagMode">
+        <text class="flag-btn-text">{{ flagMode ? 'F ON' : 'F OFF' }}</text>
+      </div>
+      <text class="status-text {{ gameState === 'win' ? 'win' : (gameState === 'lose' ? 'lose' : '') }}">
+        {{ statusMessage }}
+      </text>
+    </div>
+  </div>
+</template>
+
+<style>
+  .page {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    width: 466px;
+    height: 466px;
+    background-color: #12121f;
+    padding: 12px 12px 10px;
+    box-sizing: border-box;
+  }
+
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    height: 36px;
+    margin-bottom: 2px;
+    padding: 0 4px;
+  }
+  .info-item {
+    flex-direction: row;
+    align-items: center;
+    height: 28px;
+    padding: 2px 10px;
+    background-color: rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+  }
+  .icon {
+    font-size: 14px;
+    color: #8899bb;
+    margin-right: 5px;
+  }
+  .value {
+    font-size: 16px;
+    font-weight: 600;
+    color: #c8d8f0;
+  }
+  .value.danger { color: #ff6b6b; }
+  .reset-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 19px;
+    background-color: rgba(255, 255, 255, 0.06);
+    align-items: center;
+    justify-content: center;
+  }
+  .face-symbol {
+    font-size: 22px;
+    color: #c8d8f0;
+    font-weight: bold;
+  }
+
+  .nav-area {
+    width: 100%;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+  }
+  .nav-btn {
+    font-size: 22px;
+    color: #8899bb;
+    text-align: center;
+    padding: 2px 16px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+  }
+
+  .board-wrapper {
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+  }
+  .board {
+    flex-direction: column;
+    width: 300px;
+    height: 300px;
+    background-color: #1a1a2e;
+    border-radius: 12px;
+    padding: 3px;
+    box-sizing: border-box;
+  }
+  .board-row { flex-direction: row; }
+  .cell {
+    width: 32px;
+    height: 32px;
+    background-color: #2d2d4a;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    margin: 0.5px;
+  }
+  .cell.revealed { background-color: #1f1f36; }
+  .cell.exploded { background-color: #e74c3c; }
+  .cell.flagged { background-color: #2a2a48; }
+
+  .cell-content {
+    font-size: 16px;
+    font-weight: 700;
+    color: #c8d8f0;
+  }
+  .cell-content.n1 { color: #5b9bd5; }
+  .cell-content.n2 { color: #5fc75f; }
+  .cell-content.n3 { color: #e74c6f; }
+  .cell-content.n4 { color: #9b59b6; }
+  .cell-content.n5 { color: #e67e22; }
+  .cell-content.n6 { color: #1abc9c; }
+  .cell-content.n7 { color: #2c3e50; }
+  .cell-content.n8 { color: #95a5a6; }
+
+  /* 公式模式：更小字号 + 统一金色 */
+  .cell-content.formula-mode {
+    font-size: 10px;
+    font-weight: 600;
+    color: #d4a843;
+  }
+
+  .footer {
+    height: 36px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 4px;
+    gap: 12px;
+  }
+  .flag-btn {
+    width: 60px;
+    height: 30px;
+    background-color: rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    align-items: center;
+    justify-content: center;
+  }
+  .flag-btn.flag-active {
+    background-color: rgba(255, 100, 100, 0.25);
+  }
+  .flag-btn-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #8899bb;
+  }
+  .flag-btn.flag-active .flag-btn-text {
+    color: #ff6b6b;
+  }
+  .status-text {
+    font-size: 12px;
+    color: #667799;
+  }
+  .status-text.win { color: #5fc75f; }
+  .status-text.lose { color: #e74c6f; }
+</style>
+
+<script>
+  import router from '@system.router'
+  import storage from '@system.storage'
+
+  // ============ 公式池 ============
+  // 索引 0 = 数字1 ... 索引 7 = 数字8
+  // 包含：平方根 √、阶乘 !、平方/立方 ²/³、对数 lg、三角 cos
+  const FORMULA_POOL = [
+    // 1
+    ['lg10', 'cos0', '3-2', '√1', '9÷9', '2-1'],
+    // 2
+    ['√4', 'lg100', '8÷4', '2!', '1+1', '6÷3'],
+    // 3
+    ['√9', '9÷3', '6÷2', '3!÷2', '7-4', '12÷4'],
+    // 4
+    ['√16', '2²', '8÷2', '2+2', '4!÷3!', '6-2'],
+    // 5
+    ['√25', '10÷2', '3+2', '2³-3', '15÷3', '7-2'],
+    // 6
+    ['3!', '√36', '2×3', '12÷2', '2³-2', '4!÷4'],
+    // 7
+    ['√49', '3+4', '2³-1', '3!+1', '14÷2', '8-1'],
+    // 8
+    ['2³', '√64', '4×2', '4!÷3', '16÷2', '4+4']
+  ]
+
+  export default {
+    data: {
+      ROWS: 9,
+      COLS: 9,
+      TOTAL_MINES: 10,
+      grid: [],
+      gameState: 'playing',
+      firstClick: true,
+      timer: 0,
+      timerId: null,
+      flagCount: 0,
+      revealedCount: 0,
+      totalSafeCells: 71,
+      faceSymbol: 'O',
+      statusMessage: '单击翻开 · F键标雷',
+      remainingMines: 10,
+      timerDisplay: '000',
+      flagMode: false,
+      pressStartTime: 0,
+      isLongPress: false,
+      // 公式模式
+      formulaMode: false
+    },
+
+    onShow() {
+      this.loadModeAndInit()
+    },
+    onHide() {
+      this.stopTimer()
+    },
+
+    // ============ 读取模式后初始化 ============
+    loadModeAndInit() {
+      storage.get({
+        key: 'formulaMode',
+        success: (data) => {
+          this.formulaMode = (data === 'true')
+          this.initGame()
+        },
+        fail: () => {
+          this.formulaMode = false
+          this.initGame()
+        }
+      })
+    },
+
+    // ============ 标雷模式切换 ============
+    toggleFlagMode() {
+      if (this.gameState !== 'playing') return
+      this.flagMode = !this.flagMode
+      if (this.flagMode) {
+        this.statusMessage = '标雷模式开 · 点击格子插旗'
+      } else {
+        this.statusMessage = this.formulaMode ? '计算公式 · 长按标雷' : '单击翻开 · F键标雷'
+      }
+    },
+
+    // ============ 触摸事件处理 ============
+    onCellUp(row, col) {
+      if (this.isLongPress) {
+        this.isLongPress = false
+        return
+      }
+      if (this.gameState !== 'playing') return
+
+      const cell = this.grid[row][col]
+      if (!cell) return
+
+      if (this.flagMode) {
+        if (cell.revealed) return
+        if (this.firstClick) return
+        cell.flagged = !cell.flagged
+        this.flagCount += cell.flagged ? 1 : -1
+        this.remainingMines = this.TOTAL_MINES - this.flagCount
+        this.checkWin()
+        return
+      }
+
+      if (cell.revealed && cell.adjacentMines > 0 && !cell.mine) {
+        this.quickExpand(row, col)
+        return
+      }
+      if (cell.revealed || cell.flagged) return
+
+      if (this.firstClick) {
+        this.placeMines(row, col)
+        this.firstClick = false
+        this.startTimer()
+        this.revealCell(row, col)
+        return
+      }
+      this.revealCell(row, col)
+    },
+
+    onCellLong(row, col) {
+      if (this.gameState !== 'playing') return
+      this.isLongPress = true
+      if (!this.flagMode && !this.firstClick) {
+        const cell = this.grid[row][col]
+        if (cell && !cell.revealed) {
+          cell.flagged = !cell.flagged
+          this.flagCount += cell.flagged ? 1 : -1
+          this.remainingMines = this.TOTAL_MINES - this.flagCount
+          this.checkWin()
+        }
+      }
+    },
+
+    // ============ 游戏逻辑 ============
+    initGame() {
+      this.stopTimer()
+      this.gameState = 'playing'
+      this.firstClick = true
+      this.timer = 0
+      this.timerDisplay = '000'
+      this.flagCount = 0
+      this.revealedCount = 0
+      this.remainingMines = this.TOTAL_MINES
+      this.faceSymbol = 'O'
+      this.flagMode = false
+      this.isLongPress = false
+      this.statusMessage = this.formulaMode ? '计算公式 · 长按标雷' : '单击翻开 · F键标雷'
+
+      this.grid = []
+      for (let i = 0; i < this.ROWS; i++) {
+        this.grid[i] = []
+        for (let j = 0; j < this.COLS; j++) {
+          this.grid[i][j] = {
+            mine: false,
+            revealed: false,
+            flagged: false,
+            exploded: false,
+            adjacentMines: 0,
+            formula: ''
+          }
+        }
+      }
+    },
+
+    placeMines(safeRow, safeCol) {
+      const safeSet = new Set()
+      safeSet.add(`${safeRow},${safeCol}`)
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          const nr = safeRow + dr
+          const nc = safeCol + dc
+          if (nr >= 0 && nr < this.ROWS && nc >= 0 && nc < this.COLS) {
+            safeSet.add(`${nr},${nc}`)
+          }
+        }
+      }
+      const available = []
+      for (let r = 0; r < this.ROWS; r++) {
+        for (let c = 0; c < this.COLS; c++) {
+          if (!safeSet.has(`${r},${c}`)) available.push({ row: r, col: c })
+        }
+      }
+      for (let i = available.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[available[i], available[j]] = [available[j], available[i]]
+      }
+      for (let i = 0; i < Math.min(this.TOTAL_MINES, available.length); i++) {
+        const { row, col } = available[i]
+        this.grid[row][col].mine = true
+      }
+      for (let r = 0; r < this.ROWS; r++) {
+        for (let c = 0; c < this.COLS; c++) {
+          if (!this.grid[r][c].mine) {
+            this.grid[r][c].adjacentMines = this.countNeighbors(r, c)
+          }
+        }
+      }
+
+      // 公式模式：为每个数字格分配随机公式
+      if (this.formulaMode) {
+        this.assignFormulas()
+      }
+    },
+
+    // ============ 公式分配 ============
+    assignFormulas() {
+      for (let r = 0; r < this.ROWS; r++) {
+        for (let c = 0; c < this.COLS; c++) {
+          const cell = this.grid[r][c]
+          if (!cell.mine && cell.adjacentMines > 0) {
+            const pool = FORMULA_POOL[cell.adjacentMines - 1]
+            cell.formula = pool[Math.floor(Math.random() * pool.length)]
+          }
+        }
+      }
+    },
+
+    countNeighbors(row, col) {
+      let count = 0
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue
+          const nr = row + dr
+          const nc = col + dc
+          if (nr >= 0 && nr < this.ROWS && nc >= 0 && nc < this.COLS && this.grid[nr][nc].mine) count++
+        }
+      }
+      return count
+    },
+
+    startTimer() {
+      if (this.timerId) return
+      this.timer = 0
+      this.timerId = setInterval(() => {
+        this.timer++
+        if (this.timer < 10) {
+          this.timerDisplay = '00' + this.timer
+        } else if (this.timer < 100) {
+          this.timerDisplay = '0' + this.timer
+        } else {
+          this.timerDisplay = String(Math.min(this.timer, 999))
+        }
+      }, 1000)
+    },
+    stopTimer() {
+      if (this.timerId) { clearInterval(this.timerId); this.timerId = null }
+    },
+
+    revealCell(row, col) {
+      if (this.gameState !== 'playing') return
+      const cell = this.grid[row][col]
+      if (!cell || cell.revealed || cell.flagged) return
+      if (cell.mine) {
+        cell.revealed = true
+        cell.exploded = true
+        this.gameOver()
+        return
+      }
+      const queue = [{ row, col }]
+      const visited = new Set()
+      visited.add(`${row},${col}`)
+      while (queue.length > 0) {
+        const { row: r, col: c } = queue.shift()
+        const cur = this.grid[r][c]
+        if (cur.revealed) continue
+        cur.revealed = true
+        this.revealedCount++
+        if (cur.adjacentMines > 0) continue
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            if (dr === 0 && dc === 0) continue
+            const nr = r + dr
+            const nc = c + dc
+            if (nr < 0 || nr >= this.ROWS || nc < 0 || nc >= this.COLS) continue
+            const key = `${nr},${nc}`
+            if (visited.has(key)) continue
+            visited.add(key)
+            const neighbor = this.grid[nr][nc]
+            if (!neighbor.revealed && !neighbor.flagged && !neighbor.mine) {
+              queue.push({ row: nr, col: nc })
+            }
+          }
+        }
+      }
+      this.checkWin()
+    },
+
+    quickExpand(row, col) {
+      const cell = this.grid[row][col]
+      if (!cell.revealed || cell.adjacentMines === 0) return
+      let flagsAround = 0
+      const neighbors = []
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue
+          const nr = row + dr
+          const nc = col + dc
+          if (nr >= 0 && nr < this.ROWS && nc >= 0 && nc < this.COLS) {
+            neighbors.push({ row: nr, col: nc })
+            if (this.grid[nr][nc].flagged) flagsAround++
+          }
+        }
+      }
+      if (flagsAround !== cell.adjacentMines) return
+      let hitMine = false
+      for (const { row: nr, col: nc } of neighbors) {
+        const neighbor = this.grid[nr][nc]
+        if (!neighbor.revealed && !neighbor.flagged) {
+          if (neighbor.mine) {
+            neighbor.revealed = true
+            neighbor.exploded = true
+            hitMine = true
+          } else {
+            this.revealCell(nr, nc)
+          }
+        }
+      }
+      if (hitMine) this.gameOver()
+    },
+
+    checkWin() {
+      if (this.revealedCount === this.totalSafeCells) {
+        this.gameState = 'win'
+        this.faceSymbol = 'V'
+        this.statusMessage = '恭喜胜利！'
+        this.stopTimer()
+        for (let r = 0; r < this.ROWS; r++) {
+          for (let c = 0; c < this.COLS; c++) {
+            if (this.grid[r][c].mine && !this.grid[r][c].flagged) {
+              this.grid[r][c].flagged = true
+              this.flagCount++
+            }
+          }
+        }
+        this.remainingMines = 0
+      }
+    },
+
+    gameOver() {
+      this.gameState = 'lose'
+      this.faceSymbol = 'X'
+      this.statusMessage = '踩雷了！点击X重试'
+      this.stopTimer()
+      for (let r = 0; r < this.ROWS; r++) {
+        for (let c = 0; c < this.COLS; c++) {
+          if (this.grid[r][c].mine) this.grid[r][c].revealed = true
+        }
+      }
+    },
+
+    // ============ 格子显示 ============
+    getCellContent(cell) {
+      if (cell.flagged) return 'F'
+      if (!cell.revealed) return ''
+      if (cell.mine) return '*'
+      if (cell.adjacentMines === 0) return ''
+      // 公式模式：显示公式替代数字
+      if (this.formulaMode && cell.formula) return cell.formula
+      return cell.adjacentMines
+    },
+
+    getCellClass(cell) {
+      let cls = ''
+      if (cell.revealed) cls += 'revealed '
+      if (cell.exploded) cls += 'exploded '
+      if (cell.flagged && !cell.revealed) cls += 'flagged '
+      return cls.trim()
+    },
+
+    getContentClass(cell) {
+      if (cell.flagged) return ''
+      if (!cell.revealed) return ''
+      if (cell.mine) return ''
+      if (cell.adjacentMines > 0) {
+        // 公式模式：统一金色样式，不按数字分色
+        if (this.formulaMode) return 'formula-mode'
+        return 'n' + cell.adjacentMines
+      }
+      return ''
+    },
+
+    goToAbout() {
+      router.push({ uri: 'about' })
+    }
+  }
+</script>

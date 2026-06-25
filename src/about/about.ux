@@ -1,0 +1,221 @@
+<template>
+  <div class="page">
+    <!-- 返回按钮 -->
+    <div class="top-row">
+      <text class="back-btn" onclick="goBack"><</text>
+    </div>
+
+    <!-- 模式选择 -->
+    <div class="mode-row">
+      <div class="mode-btn" onclick="startClassic">
+        <text class="mode-btn-text">经典</text>
+      </div>
+      <div class="mode-btn mode-formula" onclick="startFormula">
+        <text class="mode-btn-text">公式扫雷</text>
+      </div>
+    </div>
+
+    <!-- 制作信息 -->
+    <div class="card-area">
+      <text class="maker-text">制作：tianry</text>
+    </div>
+
+    <!-- 符号说明 -->
+    <div class="card-area symbol-card">
+      <text class="card-title">符号说明</text>
+      <div class="symbol-row">
+        <text class="symbol">M</text>
+        <text class="desc">剩余地雷数</text>
+      </div>
+      <div class="symbol-row">
+        <text class="symbol">T</text>
+        <text class="desc">计时器</text>
+      </div>
+      <div class="symbol-row">
+        <text class="symbol">O</text>
+        <text class="desc">游戏进行中</text>
+      </div>
+      <div class="symbol-row">
+        <text class="symbol">V</text>
+        <text class="desc">胜利</text>
+      </div>
+      <div class="symbol-row">
+        <text class="symbol">X</text>
+        <text class="desc">失败（踩雷）</text>
+      </div>
+      <div class="symbol-row">
+        <text class="symbol">F</text>
+        <text class="desc">旗帜标记</text>
+      </div>
+      <div class="symbol-row">
+        <text class="symbol">*</text>
+        <text class="desc">地雷</text>
+      </div>
+      <div class="symbol-row">
+        <text class="symbol">1-8</text>
+        <text class="desc">周围雷数（经典）</text>
+      </div>
+      <div class="symbol-row">
+        <text class="symbol" style="color: #d4a843;">√x</text>
+        <text class="desc">公式代替数字</text>
+      </div>
+      <div class="symbol-row">
+        <text class="symbol" style="color: #ff6b6b;">F ON</text>
+        <text class="desc">标雷模式</text>
+      </div>
+    </div>
+
+    <!-- 赞赏码 -->
+    <div class="card-area donate-card">
+      <text class="card-title">请作者喝杯咖啡</text>
+      <image src="/common/donate_qr.png" class="qr-image" />
+    </div>
+
+    <!-- 底部留白 -->
+    <div class="bottom-spacer"></div>
+  </div>
+</template>
+
+<style>
+  .page {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    width: 466px;
+    background-color: #12121f;
+    padding: 12px 0 10px;
+    box-sizing: border-box;
+  }
+
+  .top-row {
+    width: 380px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 10px;
+  }
+  .back-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 26px;
+    font-weight: 400;
+    color: #8899bb;
+    text-align: center;
+    line-height: 44px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 22px;
+  }
+
+  .mode-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+  }
+  .mode-btn {
+    height: 38px;
+    padding: 0 20px;
+    background-color: rgba(255, 255, 255, 0.06);
+    border-radius: 19px;
+    align-items: center;
+    justify-content: center;
+    margin: 0 6px;
+  }
+  .mode-btn.mode-formula {
+    background-color: rgba(212, 168, 67, 0.18);
+  }
+  .mode-btn-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #8899bb;
+  }
+  .mode-btn.mode-formula .mode-btn-text {
+    color: #d4a843;
+  }
+
+  .card-area {
+    width: 380px;
+    border-radius: 16px;
+    background-color: rgba(255, 255, 255, 0.04);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    box-sizing: border-box;
+    margin-bottom: 12px;
+  }
+  .maker-text {
+    font-size: 18px;
+    font-weight: 400;
+    color: #c8d8f0;
+  }
+  .symbol-card {
+    align-items: flex-start;
+  }
+  .card-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #c8d8f0;
+    text-align: center;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  .symbol-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+  .symbol {
+    width: 50px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #c8d8f0;
+    text-align: center;
+  }
+  .desc {
+    font-size: 13px;
+    color: #8899bb;
+    margin-left: 10px;
+  }
+
+  .donate-card {
+    padding: 16px 14px 20px;
+  }
+  .qr-image {
+    width: 200px;
+    height: 200px;
+    margin-top: 8px;
+    border-radius: 12px;
+  }
+
+  .bottom-spacer {
+    height: 16px;
+  }
+</style>
+
+<script>
+  import router from '@system.router'
+  import storage from '@system.storage'
+
+  export default {
+    goBack() {
+      router.back()
+    },
+    startClassic() {
+      storage.set({
+        key: 'formulaMode',
+        value: 'false',
+        success: () => { router.back() },
+        fail: () => { router.back() }
+      })
+    },
+    startFormula() {
+      storage.set({
+        key: 'formulaMode',
+        value: 'true',
+        success: () => { router.back() },
+        fail: () => { router.back() }
+      })
+    }
+  }
+</script>

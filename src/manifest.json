@@ -1,0 +1,40 @@
+{
+  "package": "com.watch.tianry.minesweeper",
+  "name": "扫雷",
+  "versionName": "1.2.9v",
+  "versionCode": 1,
+  "minPlatformVersion": 1000,
+  "icon": "/common/logo.png",
+  "deviceTypeList": [
+    "watch"
+  ],
+  "features": [
+	{
+		"name": "system.router"
+	},
+	{
+		"name": "system.prompt"
+	},
+	{
+		"name": "system.storage"
+	}
+],
+  "config": {
+    "logLevel": "log",
+    "designWidth": "device-width"
+  },
+  "router": {
+    "entry": "pages/index",
+    "pages": {
+	"pages/index": {
+		"component": "index"
+	},
+	"pages/detail": {
+		"component": "detail"
+	},
+	"about": {
+		"component": "about"
+	}
+}
+  }
+}
