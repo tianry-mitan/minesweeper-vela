@@ -1,660 +1,942 @@
 <template>
-  <div class="page {{ skinClass }}">
+  <div class="page">
 
-    <div class="header">
-      <div class="info-box">
-        <text class="info-icon">{{ gi('M') }}</text>
-        <text class="info-val {{ remainingMines < 0 ? 'danger' : '' }}">{{ gm() }}</text>
+    <!-- MENU -->
+    <div if="{{view==='menu'}}" class="menu">
+      <text class="title">扫雷</text>
+
+      <div class="mbtn" onclick="startClassic()">
+        <text class="mt">经典模式</text>
       </div>
-      <div class="face-btn" onclick="initGame">
-        <text class="face-txt">{{ gf() }}</text>
+      <div class="diff-row">
+        <div class="da" onclick="prevDiff()"><text class="dat">&lt;</text></div>
+        <text class="dl">{{diffLabel}} · {{diffMines}}雷</text>
+        <div class="da" onclick="nextDiff()"><text class="dat">&gt;</text></div>
       </div>
-      <div class="info-box">
-        <text class="info-icon">{{ gi('T') }}</text>
-        <text class="info-val">{{ gt() }}</text>
+
+      <div class="mbtn mbtn-c" onclick="startChaos()">
+        <text class="mt">混乱模式</text>
+        <text class="ms">雷数随机 · 禁作弊</text>
       </div>
+
+      <div class="mbtn mbtn-d" onclick="startDaily()">
+        <text class="mt">每日挑战</text>
+        <text class="ms">{{dailyText}}</text>
+      </div>
+
+      <div class="st-link" onclick="goStats()">
+        <text class="st-txt">统计 · {{winRate}}%胜率</text>
+      </div>
+
+      <div class="about-link" onclick="goAbout()">
+        <text class="about-txt">关于</text>
+      </div>
+
+      <text class="cr">制作者: tianry</text>
     </div>
 
-    <div class="nav-area">
-      <text class="nav-btn" onclick="goToAbout">...</text>
-    </div>
+    <!-- GAME -->
+    <div if="{{view==='game'}}" class="game">
+      <div class="top-bar">
+        <text class="tb-back" onclick="backMenu()">&lt;</text>
+        <div class="tb-left">
+          <div class="mine-dot"></div>
+          <text class="tb-mn">{{mineLeft}}{{mode==='chaos'?'?':''}}</text>
+        </div>
+        <text class="mode-tag {{mode==='chaos'?'tag-c':''}} {{isDaily?'tag-d':''}}">{{modeLabel}}</text>
+        <text class="tb-time">{{timerStr}}</text>
+      </div>
 
-    <div class="board-wrap">
-      <div class="board">
-        <block for="(i, row) in grid">
-          <div class="board-row">
-            <block for="(j, cell) in row">
-              <div class="cell {{ cs(cell) }}"
-                   onclick="onCellUp(i, j)"
-                   onlongpress="onCellLong(i, j)">
-                <text class="num {{ cn(cell) }}">{{ cc(cell) }}</text>
-              </div>
-            </block>
+      <div class="board" style="width:{{boardW}}px;">
+        <div for="(ri, row) in board" class="brow">
+          <div for="(ci, cell) in row" class="bcell"
+               style="width:{{cellSize}}px;height:{{cellSize}}px;background-color:{{cell.bg}};"
+               onclick="tap(ri, ci)">
+            <text class="bct" style="color:{{cell.tc}};font-size:{{cellFont}}px;">{{cell.ch}}</text>
           </div>
-        </block>
+        </div>
+      </div>
+
+      <text class="tip" if="{{mode==='chaos'}}">雷位每步变化</text>
+
+      <div class="ctrl">
+        <div class="cb {{flagMode?'cbon':''}}" onclick="toggleFlag()">
+          <text class="ct">{{flagMode?'旗':'探'}}</text>
+        </div>
+        <div class="cb {{undoLeft<=0?'cbdis':''}}" onclick="doUndo()">
+          <text class="ct {{undoLeft<=0?'ctdis':''}}">撤{{undoLeft}}</text>
+        </div>
+        <div class="cb" onclick="doRestart()">
+          <text class="ct">重来</text>
+        </div>
+        <div if="{{mode!=='chaos'}}" class="cb {{cheatOn?'cbon':''}}" onclick="toggleCheat()">
+          <text class="ct">{{cheatOn?'隐':'看'}}</text>
+        </div>
+        <div if="{{mode==='chaos'}}" class="cb cbdis">
+          <text class="ct ctdis">看</text>
+        </div>
+      </div>
+
+      <div if="{{gameOver||won}}" class="ov">
+        <div class="ov-icon {{won?'ovw':'ovl'}}">
+          <text class="ov-ic">{{won?'V':'X'}}</text>
+        </div>
+        <text class="ovt">{{won?'扫雷成功':'踩雷了'}}</text>
+        <text class="ovs" if="{{won}}">{{timerStr}}秒{{isNewRecord?' · 新纪录!':''}}</text>
+        <div class="ovb-row">
+          <div class="ovb" onclick="doRestart()"><text class="ovbt">再来</text></div>
+          <div class="ovb ovb2" onclick="backMenu()"><text class="ovbt ovbt2">菜单</text></div>
+        </div>
       </div>
     </div>
 
-    <div class="footer">
-      <div class="flag-btn {{ flagMode ? 'flag-on' : '' }}" onclick="toggleFlag">
-        <text class="flag-txt {{ flagMode ? 'flag-txt-on' : '' }}">{{ gfl() }}</text>
+    <!-- STATS -->
+    <div if="{{view==='stats'}}" class="stats-view">
+      <div class="hdr">
+        <div class="bk" onclick="closeStats()"><text class="bkt">&lt;</text></div>
+        <text class="ht">统计数据</text>
+        <div class="ph"></div>
       </div>
-      <text class="status {{ statusCls }}">{{ gs() }}</text>
+
+      <div class="stbl">
+        <div class="sr"><text class="sl">总局数</text><text class="sv">{{stats.total}}</text></div>
+        <div class="sr"><text class="sl">胜率</text><text class="sv">{{winRate}}%</text></div>
+        <div class="sr"><text class="sl">当前连胜</text><text class="sv">{{stats.streak}}</text></div>
+        <div class="sr"><text class="sl">最长连胜</text><text class="sv">{{stats.maxStreak}}</text></div>
+        <div class="sr"><text class="sl">总用时</text><text class="sv">{{totalTimeStr}}</text></div>
+      </div>
+
+      <div class="stbl">
+        <div class="sr"><text class="sl">简单最佳</text><text class="sv">{{bestEasyStr}}</text></div>
+        <div class="sr"><text class="sl">普通最佳</text><text class="sv">{{bestNormalStr}}</text></div>
+        <div class="sr"><text class="sl">困难最佳</text><text class="sv">{{bestHardStr}}</text></div>
+        <div class="sr"><text class="sl">经典胜</text><text class="sv">{{stats.classicWins||0}}</text></div>
+        <div class="sr"><text class="sl">混乱胜</text><text class="sv">{{stats.chaosWins||0}}</text></div>
+        <div class="sr"><text class="sl">每日完成</text><text class="sv">{{stats.dailyDone||0}}</text></div>
+      </div>
+
+      <div class="rst-btn" onclick="resetStats()">
+        <text class="rst-txt">重置统计</text>
+      </div>
     </div>
 
   </div>
 </template>
 
 <style>
-  /* ===== LAYOUT ===== */
   .page {
     position: absolute;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
     width: 466px;
     height: 466px;
-    background-color: #12121f;
-    padding: 12px 12px 10px;
-    box-sizing: border-box;
-  }
-  .header {
-    flex-direction: row;
-    justify-content: space-between;
+    border-radius: 233px;
+    background-color: #000000;
+    flex-direction: column;
     align-items: center;
-    width: 100%;
-    height: 36px;
-    margin-bottom: 2px;
-    padding: 0 4px;
+    justify-content: center;
+    overflow: hidden;
   }
-  .info-box {
-    flex-direction: row;
+
+  .menu {
+    flex-direction: column;
     align-items: center;
-    height: 28px;
-    padding: 2px 10px;
-    background-color: rgba(255, 255, 255, 0.04);
-    border-radius: 12px;
-    border-width: 0px;
-    border-color: transparent;
-    box-sizing: border-box;
+    justify-content: center;
   }
-  .info-icon {
+  .title {
+    font-size: 26px;
+    font-weight: 700;
+    color: #e8e8f0;
+    margin-bottom: 10px;
+  }
+  .mbtn {
+    width: 190px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    background-color: rgba(91, 155, 213, 0.12);
+    border-radius: 14px;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 3px;
+  }
+  .mbtn-c {
+    background-color: rgba(213, 91, 91, 0.12);
+  }
+  .mbtn-d {
+    background-color: rgba(213, 179, 91, 0.12);
+  }
+  .mt {
     font-size: 14px;
-    color: #8899bb;
-    margin-right: 5px;
+    font-weight: 700;
+    color: #e8e8f0;
   }
-  .info-val {
-    font-size: 16px;
-    font-weight: 600;
-    color: #c8d8f0;
+  .ms {
+    font-size: 10px;
+    color: #667799;
+    margin-top: 1px;
   }
-  .face-btn {
-    width: 38px;
-    height: 38px;
-    border-radius: 19px;
-    background-color: rgba(255, 255, 255, 0.06);
+  .diff-row {
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    border-width: 0px;
-    border-color: transparent;
-    box-sizing: border-box;
+    margin-bottom: 6px;
   }
-  .face-txt {
-    font-size: 22px;
-    color: #c8d8f0;
-    font-weight: bold;
-  }
-  .nav-area {
-    width: 100%;
-    height: 30px;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 4px;
-  }
-  .nav-btn {
-    font-size: 22px;
-    color: #8899bb;
-    text-align: center;
-    padding: 2px 16px;
-    background-color: rgba(255, 255, 255, 0.05);
+  .da {
+    width: 24px;
+    height: 24px;
+    background-color: #1a1a2e;
     border-radius: 12px;
-    border-width: 0px;
-    border-color: transparent;
-    box-sizing: border-box;
-  }
-  .board-wrap {
-    flex: 1;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    min-height: 0;
+  }
+  .dat {
+    font-size: 12px;
+    font-weight: 700;
+    color: #5b9bd5;
+  }
+  .dl {
+    font-size: 12px;
+    font-weight: 600;
+    color: #8899bb;
+    margin-left: 8px;
+    margin-right: 8px;
+  }
+  .st-link {
+    margin-top: 6px;
+    padding: 3px 14px;
+  }
+  .st-txt {
+    font-size: 10px;
+    color: #556677;
+  }
+  .about-link {
+    margin-top: 4px;
+    padding: 3px 14px;
+  }
+  .about-txt {
+    font-size: 10px;
+    color: #556677;
+  }
+  .cr {
+    font-size: 9px;
+    color: #334455;
+    margin-top: 4px;
+  }
+
+  .game {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .top-bar {
+    width: 270px;
+    height: 30px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .tb-back {
+    font-size: 14px;
+    font-weight: 700;
+    color: #667799;
+    padding: 4px;
+    width: 20px;
+    text-align: center;
+  }
+  .tb-left {
+    flex-direction: row;
+    align-items: center;
+    width: 40px;
+  }
+  .mine-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 4px;
+    background-color: #d55b5b;
+    margin-right: 3px;
+  }
+  .tb-mn {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e8e8f0;
+  }
+  .mode-tag {
+    font-size: 10px;
+    font-weight: 600;
+    color: #5b9bd5;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    background-color: rgba(91, 155, 213, 0.1);
+    border-radius: 8px;
+  }
+  .tag-c {
+    color: #d55b5b;
+    background-color: rgba(213, 91, 91, 0.1);
+  }
+  .tag-d {
+    color: #d5b35b;
+    background-color: rgba(213, 179, 91, 0.1);
+  }
+  .tb-time {
+    font-size: 13px;
+    font-weight: 700;
+    color: #8899bb;
+    width: 40px;
+    text-align: right;
   }
   .board {
     flex-direction: column;
-    width: 300px;
-    height: 300px;
-    background-color: #1a1a2e;
-    border-radius: 12px;
-    padding: 3px;
-    box-sizing: border-box;
+    align-items: center;
   }
-  .board-row {
+  .brow {
     flex-direction: row;
   }
-  .cell {
-    width: 32px;
-    height: 32px;
-    background-color: #2d2d4a;
+  .bcell {
+    margin-left: 1px;
+    margin-right: 1px;
+    margin-bottom: 2px;
     border-radius: 4px;
     align-items: center;
     justify-content: center;
-    margin: 0.5px;
-    border-width: 0px;
-    border-color: transparent;
-    box-sizing: border-box;
   }
-  .num {
-    font-size: 16px;
+  .bct {
     font-weight: 700;
-    color: #c8d8f0;
+    text-align: center;
   }
-  .footer {
-    height: 36px;
+  .tip {
+    font-size: 9px;
+    color: #553333;
+    margin-top: 2px;
+    margin-bottom: 2px;
+  }
+  .ctrl {
     flex-direction: row;
     align-items: center;
     justify-content: center;
     margin-top: 4px;
-    gap: 12px;
   }
-  .flag-btn {
-    width: 60px;
-    height: 30px;
-    background-color: rgba(255, 255, 255, 0.06);
+  .cb {
+    width: 50px;
+    height: 28px;
+    background-color: #1a1a2e;
     border-radius: 8px;
     align-items: center;
     justify-content: center;
-    border-width: 0px;
-    border-color: transparent;
-    box-sizing: border-box;
+    margin-left: 4px;
+    margin-right: 4px;
   }
-  .flag-txt {
-    font-size: 14px;
-    font-weight: 600;
-    color: #8899bb;
+  .cbon {
+    background-color: rgba(91, 155, 213, 0.25);
   }
-  .status {
+  .cbdis {
+    background-color: #111118;
+  }
+  .ct {
     font-size: 12px;
+    font-weight: 700;
+    color: #aabbcc;
+  }
+  .ctdis {
+    color: #333340;
+  }
+
+  .ov {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 466px;
+    height: 466px;
+    border-radius: 233px;
+    background-color: rgba(0, 0, 0, 0.88);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 99;
+  }
+  .ov-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 26px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+  .ovw {
+    background-color: rgba(91, 213, 141, 0.2);
+  }
+  .ovl {
+    background-color: rgba(213, 91, 91, 0.2);
+  }
+  .ov-ic {
+    font-size: 26px;
+    font-weight: 700;
+  }
+  .ovw .ov-ic {
+    color: #5bd58d;
+  }
+  .ovl .ov-ic {
+    color: #d55b5b;
+  }
+  .ovt {
+    font-size: 17px;
+    font-weight: 700;
+    color: #e8e8f0;
+    margin-bottom: 3px;
+  }
+  .ovs {
+    font-size: 12px;
+    color: #667799;
+    margin-bottom: 14px;
+  }
+  .ovb-row {
+    flex-direction: row;
+    align-items: center;
+  }
+  .ovb {
+    width: 76px;
+    height: 32px;
+    background-color: rgba(91, 155, 213, 0.15);
+    border-radius: 16px;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    margin-right: 6px;
+  }
+  .ovb2 {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+  .ovbt {
+    font-size: 13px;
+    font-weight: 600;
+    color: #5b9bd5;
+  }
+  .ovbt2 {
     color: #667799;
   }
 
-  /* ===== DEFAULT STATES ===== */
-  .danger { color: #ff6b6b; }
-  .revealed { background-color: #1f1f36; }
-  .exploded { background-color: #e74c3c; }
-  .flagged { background-color: #2a2a48; }
-  .preview { background-color: rgba(212, 168, 67, 0.35); }
-  .flag-on { background-color: rgba(255, 100, 100, 0.25); }
-  .flag-txt-on { color: #ff6b6b; }
-  .win { color: #5fc75f; }
-  .lose { color: #e74c6f; }
-
-  /* ===== DEFAULT NUMBER COLORS ===== */
-  .n1 { color: #000000; }
-  .n2 { color: #5fc75f; }
-  .n3 { color: #000000; }
-  .n4 { color: #9b59b6; }
-  .n5 { color: #e67e22; }
-  .n6 { color: #1abc9c; }
-  .n7 { color: #2c3e50; }
-  .n8 { color: #95a5a6; }
-  .nm { font-size: 10px; font-weight: 600; color: #d4a843; }
-  .nw { font-size: 12px; font-weight: 600; color: #7a7a9a; }
-
-  /* ===== HACKER SKIN ===== */
-  .skin-hacker.page { background-color: #0a0a0a; }
-  .skin-hacker .info-box { background-color: rgba(0, 255, 65, 0.06); }
-  .skin-hacker .info-icon { color: #008f11; }
-  .skin-hacker .info-val { color: #00ff41; }
-  .skin-hacker .danger { color: #ff0000; }
-  .skin-hacker .face-btn { background-color: rgba(0, 255, 65, 0.08); }
-  .skin-hacker .face-txt { color: #00ff41; }
-  .skin-hacker .nav-btn { color: #008f11; background-color: rgba(0, 255, 65, 0.05); }
-  .skin-hacker .board { background-color: #0a140a; }
-  .skin-hacker .cell { background-color: #0d1a0d; }
-  .skin-hacker .revealed { background-color: #061206; }
-  .skin-hacker .exploded { background-color: #ff0000; }
-  .skin-hacker .flagged { background-color: #1a2e1a; }
-  .skin-hacker .preview { background-color: rgba(255, 200, 0, 0.25); }
-  .skin-hacker .num { color: #00ff41; }
-  .skin-hacker .n1 { color: #00ff41; }
-  .skin-hacker .n2 { color: #00dd33; }
-  .skin-hacker .n3 { color: #00bb22; }
-  .skin-hacker .n4 { color: #009918; }
-  .skin-hacker .n5 { color: #00770e; }
-  .skin-hacker .n6 { color: #005504; }
-  .skin-hacker .n7 { color: #003300; }
-  .skin-hacker .n8 { color: #001100; }
-  .skin-hacker .nm { color: #00ff41; }
-  .skin-hacker .nw { color: #00ff41; }
-  .skin-hacker .flag-btn { background-color: rgba(0, 255, 65, 0.08); }
-  .skin-hacker .flag-on { background-color: rgba(0, 255, 65, 0.25); }
-  .skin-hacker .flag-txt { color: #008f11; }
-  .skin-hacker .flag-txt-on { color: #00ff41; }
-  .skin-hacker .status { color: #008f11; }
-  .skin-hacker .win { color: #00ff41; }
-  .skin-hacker .lose { color: #ff0000; }
-
-  /* ===== WIN95 SKIN ===== */
-  .skin-win95.page { background-color: #c0c0c0; }
-  .skin-win95 .info-box { background-color: #c0c0c0; border-width: 2px; border-color: #808080; }
-  .skin-win95 .info-icon { color: #000080; }
-  .skin-win95 .info-val { color: #000000; }
-  .skin-win95 .danger { color: #ff0000; }
-  .skin-win95 .face-btn { background-color: #c0c0c0; border-width: 2px; border-color: #ffffff; }
-  .skin-win95 .face-txt { color: #000000; }
-  .skin-win95 .nav-btn { color: #000000; background-color: #c0c0c0; border-width: 2px; border-color: #ffffff; }
-  .skin-win95 .board { background-color: #c0c0c0; border-width: 2px; border-color: #808080; }
-  .skin-win95 .cell { background-color: #d4d4d4; border-width: 2px; border-color: #ffffff; border-radius: 0px; }
-  .skin-win95 .revealed { background-color: #c0c0c0; border-width: 1px; border-color: #808080; border-radius: 0px; }
-  .skin-win95 .exploded { background-color: #ff0000; border-width: 0px; border-radius: 0px; }
-  .skin-win95 .flagged { background-color: #c0c0c0; border-width: 2px; border-color: #808080; border-radius: 0px; }
-  .skin-win95 .preview { background-color: #ffff80; border-width: 0px; }
-  .skin-win95 .num { color: #000000; }
-  .skin-win95 .n1 { color: #0000ff; }
-  .skin-win95 .n2 { color: #008000; }
-  .skin-win95 .n3 { color: #ff0000; }
-  .skin-win95 .n4 { color: #000080; }
-  .skin-win95 .n5 { color: #800000; }
-  .skin-win95 .n6 { color: #008080; }
-  .skin-win95 .n7 { color: #000000; }
-  .skin-win95 .n8 { color: #808080; }
-  .skin-win95 .nm { color: #000000; }
-  .skin-win95 .nw { color: #000000; }
-  .skin-win95 .flag-btn { background-color: #c0c0c0; border-width: 2px; border-color: #ffffff; }
-  .skin-win95 .flag-on { border-color: #808080; }
-  .skin-win95 .flag-txt { color: #000000; }
-  .skin-win95 .flag-txt-on { color: #ff0000; }
-  .skin-win95 .status { color: #000000; }
-  .skin-win95 .win { color: #000080; }
-  .skin-win95 .lose { color: #ff0000; }
+  .stats-view {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .hdr {
+    width: 240px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .bk {
+    width: 28px;
+    height: 28px;
+    background-color: #1a1a2e;
+    border-radius: 14px;
+    align-items: center;
+    justify-content: center;
+  }
+  .ph {
+    width: 28px;
+    height: 28px;
+  }
+  .bkt {
+    font-size: 13px;
+    font-weight: 700;
+    color: #667799;
+  }
+  .ht {
+    font-size: 14px;
+    font-weight: 700;
+    color: #c8d8f0;
+  }
+  .stbl {
+    width: 230px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    flex-direction: column;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    padding-left: 12px;
+    padding-right: 12px;
+    margin-bottom: 6px;
+  }
+  .sr {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+  .sl {
+    font-size: 10px;
+    color: #556677;
+  }
+  .sv {
+    font-size: 10px;
+    font-weight: 600;
+    color: #aabbcc;
+  }
+  .rst-btn {
+    margin-top: 4px;
+    padding: 4px 16px;
+    background-color: rgba(213, 91, 91, 0.08);
+    border-radius: 10px;
+  }
+  .rst-txt {
+    font-size: 10px;
+    font-weight: 600;
+    color: #884444;
+  }
 </style>
 
 <script>
-  import router from '@system.router'
   import storage from '@system.storage'
+  import prompt from '@system.prompt'
+  import router from '@system.router'
 
-  var FORMULA_POOL = [
-    ['lg10','cos0','3-2','√1','9÷9','2-1'],
-    ['√4','lg100','8÷4','2!','1+1','6÷3'],
-    ['√9','9÷3','6÷2','3!÷2','7-4','12÷4'],
-    ['√16','2²','8÷2','2+2','4!÷3!','6-2'],
-    ['√25','10÷2','3+2','2³-3','15÷3','7-2'],
-    ['3!','√36','2×3','12÷2','2³-2','4!÷4'],
-    ['√49','3+4','2³-1','3!+1','14÷2','8-1'],
-    ['2³','√64','4×2','4!÷3','16÷2','4+4']
+  var DIFFS = [
+    { key: "easy", rows: 6, cols: 6, mines: 5, cell: 34, font: 15, label: "简单" },
+    { key: "normal", rows: 8, cols: 8, mines: 10, cell: 28, font: 13, label: "普通" },
+    { key: "hard", rows: 10, cols: 10, mines: 20, cell: 22, font: 11, label: "困难" }
   ]
-  var WUI_DIG = ['░','▓','▒','█','▄','▀','■','□','◆','◇']
-  var WUI_SYM = { '*':'※','F':'▲','O':'◉','V':'♦','X':'╳','M':'Ω','T':'∆' }
-  var WUI_POOL = '▓▒░█▄▀■□▲▼●○◆◇★♠║═╬╫'
+
+  var NUM_CLR = ["", "#5b9bd5", "#5bd58d", "#d55b5b", "#7b5bd5", "#d57b5b", "#5bd5d5", "#999", "#666"]
+
+  function emptyCell() {
+    return { mine: false, revealed: false, flagged: false, num: 0, ch: "", bg: "#1a1a2e", tc: "#c8d8f0" }
+  }
+
+  function makeBoard(rows, cols) {
+    var b = []
+    for (var r = 0; r < rows; r++) {
+      var row = []
+      for (var c = 0; c < cols; c++) row.push(emptyCell())
+      b.push(row)
+    }
+    return b
+  }
+
+  function cloneBoard(b) { return JSON.parse(JSON.stringify(b)) }
+
+  function fmtTime(sec) {
+    if (!sec || sec <= 0) return "0秒"
+    if (sec < 60) return sec + "秒"
+    if (sec < 3600) return Math.floor(sec / 60) + "分" + (sec % 60) + "秒"
+    return Math.floor(sec / 3600) + "时" + Math.floor((sec % 3600) / 60) + "分"
+  }
+
+  var _sd = 0
+  function sdInit(s) { _sd = Math.abs(s) % 2147483647; if (_sd === 0) _sd = 1 }
+  function sdNext() { _sd = (_sd * 16807) % 2147483647; return (_sd - 1) / 2147483646 }
+  function daySeed() {
+    var d = new Date()
+    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()
+  }
+
+  function newStats() {
+    return {
+      total: 0, wins: 0, streak: 0, maxStreak: 0, time: 0,
+      bestEasy: 0, bestNormal: 0, bestHard: 0,
+      classicWins: 0, chaosWins: 0, dailyDone: 0
+    }
+  }
 
   export default {
     data: {
-      ROWS: 9, COLS: 9, TOTAL_MINES: 10,
-      grid: [], gameState: 'playing', firstClick: true,
-      timer: 0, timerId: null,
-      flagCount: 0, revealedCount: 0, totalSafeCells: 71,
-      faceSymbol: 'O', statusMessage: '单击翻开 · 长按标雷',
-      remainingMines: 10, timerDisplay: '000',
-      flagMode: false, isLongPress: false,
-      formulaMode: false, winPlus: false,
-      currentSkin: 0, skinClass: '',
-      minePreview: false, pendingReveal: null,
-      statusCls: ''
+      view: "menu",
+      mode: "normal",
+      isDaily: false,
+      modeLabel: "经典",
+      rows: 8, cols: 8, mines: 10,
+      cellSize: 28, cellFont: 13, boardW: 240,
+      diffIdx: 1, diffLabel: "普通", diffMines: 10,
+      board: [],
+      firstClick: true, gameOver: false, won: false,
+      flagMode: false, cheatOn: false,
+      mineLeft: 10, curMines: 10, flagCnt: 0,
+      timer: 0, timerStr: "0", timerRef: null,
+      undoStack: [], undoLeft: 3,
+      isNewRecord: false, hitR: -1, hitC: -1,
+      lastResult: "none", lastTimer: 0,
+      stats: null,
+      winRate: 0, totalTimeStr: "0秒",
+      bestEasyStr: "--", bestNormalStr: "--", bestHardStr: "--",
+      dailyText: "今日挑战", dailyDone: false, dailyTime: 0
+    },
+
+    onInit() {
+      this.stats = newStats()
+      this.board = makeBoard(8, 8)
     },
 
     onShow() {
-      storage.get({ key: 'skin', success: (d) => {
-        this.currentSkin = parseInt(d) || 0
-        this.skinClass = ['', 'skin-hacker', 'skin-win95', ''][this.currentSkin]
-      }})
-      storage.get({ key: 'winPlus', success: (d) => { this.winPlus = (d === 'true') }})
-      storage.get({ key: 'formulaMode', success: (d) => { this.formulaMode = (d === 'true') }})
-      this.initGame()
-    },
-    onHide() { this.stopTimer() },
-
-    /* ========== WUI 显示方法 ========== */
-    gi: function(ch) {
-      if (this.currentSkin === 3) return WUI_SYM[ch] || ch
-      return ch
-    },
-    gm: function() {
-      if (this.currentSkin !== 3) return this.remainingMines
-      var n = this.remainingMines
-      if (n < 0) return '-' + WUI_DIG[Math.min(-n, 9)]
-      return WUI_DIG[Math.min(n, 9)]
-    },
-    gf: function() {
-      if (this.currentSkin !== 3) return this.faceSymbol
-      return WUI_SYM[this.faceSymbol] || this.faceSymbol
-    },
-    gt: function() {
-      if (this.currentSkin !== 3) return this.timerDisplay
-      var r = ''
-      for (var i = 0; i < this.timerDisplay.length; i++) {
-        var ch = this.timerDisplay[i]
-        r += (ch >= '0' && ch <= '9') ? WUI_DIG[parseInt(ch)] : ch
-      }
-      return r
-    },
-    gfl: function() {
-      var t = this.flagMode ? 'F ON' : 'F OFF'
-      if (this.currentSkin !== 3) return t
-      return this.garbleStr(t)
-    },
-    gs: function() {
-      if (this.currentSkin !== 3) return this.statusMessage
-      return this.garbleStr(this.statusMessage)
-    },
-    garbleStr: function(str) {
-      var r = ''
-      for (var i = 0; i < str.length; i++) {
-        if (str[i] === ' ') { r += ' '; continue }
-        r += WUI_POOL[(str.charCodeAt(i) * 7 + i * 13) % WUI_POOL.length]
-      }
-      return r
-    },
-
-    /* ========== 格子显示 ========== */
-    cc: function(cell) {
-      if (this.minePreview && cell.mine && !cell.revealed) {
-        return this.currentSkin === 3 ? '※' : '*'
-      }
-      if (cell.flagged) return this.currentSkin === 3 ? '▲' : 'F'
-      if (!cell.revealed) return ''
-      if (cell.mine) return this.currentSkin === 3 ? '※' : '*'
-      if (cell.adjacentMines === 0) return ''
-      if (this.formulaMode && cell.formula) {
-        return this.currentSkin === 3 ? this.garbleStr(cell.formula) : cell.formula
-      }
-      if (this.currentSkin === 3) return WUI_DIG[cell.adjacentMines]
-      return cell.adjacentMines
-    },
-    cs: function(cell) {
-      var c = ''
-      if (this.minePreview && cell.mine && !cell.revealed) c += 'preview '
-      if (cell.revealed) c += 'revealed '
-      if (cell.exploded) c += 'exploded '
-      if (cell.flagged && !cell.revealed) c += 'flagged '
-      return c.trim()
-    },
-    cn: function(cell) {
-      if (cell.flagged || !cell.revealed || cell.mine) return ''
-      if (cell.adjacentMines > 0) {
-        if (this.currentSkin === 3) return 'nw'
-        if (this.formulaMode) return 'nm'
-        return 'n' + cell.adjacentMines
-      }
-      return ''
-    },
-
-    /* ========== 标雷模式 ========== */
-    toggleFlag: function() {
-      if (this.gameState !== 'playing') return
-      this.flagMode = !this.flagMode
-      this.statusMessage = this.flagMode ? '标雷模式开 · 点击插旗' : (this.formulaMode ? '计算公式 · 长按标雷' : '单击翻开 · 长按标雷')
-      this.updateStatusCls()
-    },
-    updateStatusCls: function() {
-      if (this.gameState === 'win') this.statusCls = 'win'
-      else if (this.gameState === 'lose') this.statusCls = 'lose'
-      else this.statusCls = ''
-    },
-
-    /* ========== 触摸事件 ========== */
-    onCellUp: function(row, col) {
-      if (this.minePreview) return
-      if (this.isLongPress) { this.isLongPress = false; return }
-      if (this.gameState !== 'playing') return
-      var cell = this.grid[row][col]
-      if (!cell) return
-
-      if (this.flagMode) {
-        if (cell.revealed || this.firstClick) return
-        cell.flagged = !cell.flagged
-        this.flagCount += cell.flagged ? 1 : -1
-        this.remainingMines = this.TOTAL_MINES - this.flagCount
-        this.checkWin()
-        return
-      }
-      if (cell.revealed && cell.adjacentMines > 0 && !cell.mine) { this.quickExpand(row, col); return }
-      if (cell.revealed || cell.flagged) return
-
-      if (this.firstClick) {
-        this.placeMines(row, col)
-        this.firstClick = false
-        if (this.winPlus) {
-          this.pendingReveal = { row: row, col: col }
-          return
-        }
-        this.startTimer()
-        this.revealCell(row, col)
-        return
-      }
-      this.revealCell(row, col)
-    },
-
-    onCellLong: function(row, col) {
-      if (this.minePreview) return
-      if (this.gameState !== 'playing') return
-      this.isLongPress = true
-      if (!this.flagMode && !this.firstClick) {
-        var cell = this.grid[row][col]
-        if (cell && !cell.revealed) {
-          cell.flagged = !cell.flagged
-          this.flagCount += cell.flagged ? 1 : -1
-          this.remainingMines = this.TOTAL_MINES - this.flagCount
-          this.checkWin()
-        }
-      }
-    },
-
-    /* ========== 游戏逻辑 ========== */
-    initGame: function() {
-      this.stopTimer()
-      this.gameState = 'playing'
-      this.firstClick = true
-      this.timer = 0
-      this.timerDisplay = '000'
-      this.flagCount = 0
-      this.revealedCount = 0
-      this.remainingMines = this.TOTAL_MINES
-      this.faceSymbol = 'O'
-      this.flagMode = false
-      this.isLongPress = false
-      this.minePreview = false
-      this.pendingReveal = null
-      this.statusMessage = this.formulaMode ? '计算公式 · 长按标雷' : '单击翻开 · 长按标雷'
-      this.updateStatusCls()
-
-      this.grid = []
-      for (var i = 0; i < this.ROWS; i++) {
-        this.grid[i] = []
-        for (var j = 0; j < this.COLS; j++) {
-          this.grid[i][j] = { mine: false, revealed: false, flagged: false, exploded: false, adjacentMines: 0, formula: '' }
-        }
-      }
-    },
-
-    placeMines: function(safeRow, safeCol) {
-      var safeSet = {}
-      safeSet[safeRow + ',' + safeCol] = true
-      for (var dr = -1; dr <= 1; dr++) {
-        for (var dc = -1; dc <= 1; dc++) {
-          var nr = safeRow + dr, nc = safeCol + dc
-          if (nr >= 0 && nr < this.ROWS && nc >= 0 && nc < this.COLS) safeSet[nr + ',' + nc] = true
-        }
-      }
-      var available = []
-      for (var r = 0; r < this.ROWS; r++) {
-        for (var c = 0; c < this.COLS; c++) {
-          if (!safeSet[r + ',' + c]) available.push({ row: r, col: c })
-        }
-      }
-      for (var i = available.length - 1; i > 0; i--) {
-        var j = Math.floor(Math.random() * (i + 1))
-        var tmp = available[i]; available[i] = available[j]; available[j] = tmp
-      }
-      for (var k = 0; k < Math.min(this.TOTAL_MINES, available.length); k++) {
-        this.grid[available[k].row][available[k].col].mine = true
-      }
-      for (var r2 = 0; r2 < this.ROWS; r2++) {
-        for (var c2 = 0; c2 < this.COLS; c2++) {
-          if (!this.grid[r2][c2].mine) this.grid[r2][c2].adjacentMines = this.countN(r2, c2)
-        }
-      }
-      if (this.formulaMode) {
-        for (var r3 = 0; r3 < this.ROWS; r3++) {
-          for (var c3 = 0; c3 < this.COLS; c3++) {
-            var cl = this.grid[r3][c3]
-            if (!cl.mine && cl.adjacentMines > 0) {
-              var pool = FORMULA_POOL[cl.adjacentMines - 1]
-              cl.formula = pool[Math.floor(Math.random() * pool.length)]
-            }
-          }
-        }
-      }
-      if (this.winPlus) {
-        this.minePreview = true
-        this.statusMessage = '记住雷的位置！'
-        var self = this
-        setTimeout(function() {
-          self.minePreview = false
-          self.statusMessage = self.formulaMode ? '计算公式 · 长按标雷' : '单击翻开 · 长按标雷'
-          self.startTimer()
-          if (self.pendingReveal) {
-            self.revealCell(self.pendingReveal.row, self.pendingReveal.col)
-            self.pendingReveal = null
-          }
-        }, 2000)
-      }
-    },
-
-    countN: function(row, col) {
-      var count = 0
-      for (var dr = -1; dr <= 1; dr++) {
-        for (var dc = -1; dc <= 1; dc++) {
-          if (dr === 0 && dc === 0) continue
-          var nr = row + dr, nc = col + dc
-          if (nr >= 0 && nr < this.ROWS && nc >= 0 && nc < this.COLS && this.grid[nr][nc].mine) count++
-        }
-      }
-      return count
-    },
-
-    startTimer: function() {
-      if (this.timerId) return
-      this.timer = 0
       var self = this
-      this.timerId = setInterval(function() {
-        self.timer++
-        self.timerDisplay = self.timer < 10 ? '00' + self.timer : (self.timer < 100 ? '0' + self.timer : String(Math.min(self.timer, 999)))
+      storage.get({
+        key: "ms_stats",
+        success: function (d) {
+          if (d) { try { self.stats = JSON.parse(d) } catch (e) { self.stats = newStats() } }
+          else self.stats = newStats()
+          self.computeDisplay()
+        },
+        fail: function () { self.stats = newStats(); self.computeDisplay() }
+      })
+      storage.get({
+        key: "ms_daily",
+        success: function (d) {
+          var today = "" + daySeed()
+          if (d) {
+            try {
+              var o = JSON.parse(d)
+              if (o.date === today) {
+                self.dailyDone = true; self.dailyTime = o.time
+                self.dailyText = "已完成 " + o.time + "秒"
+              } else {
+                self.dailyDone = false; self.dailyText = "今日挑战"
+              }
+            } catch (e) { self.dailyDone = false; self.dailyText = "今日挑战" }
+          } else { self.dailyDone = false; self.dailyText = "今日挑战" }
+        }
+      })
+      if (this.view === "game" && !this.firstClick && !this.gameOver && !this.won) this.startTimer()
+    },
+
+    onHide() {
+      this.stopTimer()
+      if (this.gameOver || this.won) this.commitResult()
+    },
+
+    /* ---- MENU ---- */
+    prevDiff() {
+      this.diffIdx = this.diffIdx > 0 ? this.diffIdx - 1 : DIFFS.length - 1
+      this.applyDiff()
+    },
+    nextDiff() {
+      this.diffIdx = this.diffIdx < DIFFS.length - 1 ? this.diffIdx + 1 : 0
+      this.applyDiff()
+    },
+    applyDiff() {
+      var d = DIFFS[this.diffIdx]
+      this.diffLabel = d.label
+      this.diffMines = d.mines
+    },
+
+    startClassic() {
+      var d = DIFFS[this.diffIdx]
+      this.mode = "normal"; this.isDaily = false; this.modeLabel = "经典"
+      this.initGame(d.rows, d.cols, d.mines, d.cell, d.font)
+      this.view = "game"
+    },
+    startChaos() {
+      this.mode = "chaos"; this.isDaily = false; this.modeLabel = "混乱"
+      this.initGame(8, 8, 10, 28, 13)
+      this.view = "game"
+    },
+    startDaily() {
+      if (this.dailyDone) {
+        prompt.showToast({ message: "已完成 " + this.dailyTime + "秒", duration: 2000 })
+        return
+      }
+      this.mode = "normal"; this.isDaily = true; this.modeLabel = "每日"
+      this.initGame(8, 8, 10, 28, 13)
+      this.view = "game"
+    },
+    goStats() { this.view = "stats" },
+    closeStats() { this.view = "menu"; this.computeDisplay() },
+
+    goAbout() {
+      router.push({ uri: 'about' })
+    },
+
+    /* ---- INIT ---- */
+    initGame(rows, cols, mines, cell, font) {
+      this.stopTimer()
+      this.rows = rows; this.cols = cols; this.mines = mines
+      this.cellSize = cell; this.cellFont = font
+      this.boardW = cols * (cell + 2)
+      this.board = makeBoard(rows, cols)
+      this.firstClick = true; this.gameOver = false; this.won = false
+      this.flagMode = false; this.cheatOn = false
+      this.flagCnt = 0; this.curMines = mines; this.mineLeft = mines
+      this.timer = 0; this.timerStr = "0"
+      this.undoStack = []; this.undoLeft = 3
+      this.isNewRecord = false; this.hitR = -1; this.hitC = -1
+      this.lastResult = "none"; this.lastTimer = 0
+    },
+
+    /* ---- MINES ---- */
+    placeMines(er, ec) {
+      var pos = []
+      for (var r = 0; r < this.rows; r++)
+        for (var c = 0; c < this.cols; c++)
+          if (!(r === er && c === ec)) pos.push([r, c])
+      if (this.isDaily) {
+        sdInit(daySeed())
+        for (var i = pos.length - 1; i > 0; i--) {
+          var j = Math.floor(sdNext() * (i + 1))
+          var t = pos[i]; pos[i] = pos[j]; pos[j] = t
+        }
+      } else {
+        for (var i = pos.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1))
+          var t = pos[i]; pos[i] = pos[j]; pos[j] = t
+        }
+      }
+      for (var i = 0; i < this.curMines; i++)
+        this.board[pos[i][0]][pos[i][1]].mine = true
+    },
+
+    calcNumbers() {
+      for (var r = 0; r < this.rows; r++) {
+        for (var c = 0; c < this.cols; c++) {
+          if (this.board[r][c].mine) { this.board[r][c].num = -1; continue }
+          var cnt = 0
+          for (var dr = -1; dr <= 1; dr++)
+            for (var dc = -1; dc <= 1; dc++) {
+              if (dr === 0 && dc === 0) continue
+              var nr = r + dr, nc = c + dc
+              if (nr >= 0 && nr < this.rows && nc >= 0 && nc < this.cols)
+                if (this.board[nr][nc].mine) cnt++
+            }
+          this.board[r][c].num = cnt
+        }
+      }
+    },
+
+    /* ---- TAP ---- */
+    tap(r, c) {
+      if (this.gameOver || this.won) return
+      var cell = this.board[r][c]
+      if (cell.revealed) return
+      if (this.flagMode) {
+        this.saveUndo(); this.doFlag(r, c); this.afterAction()
+        return
+      }
+      if (cell.flagged) return
+      this.saveUndo()
+      if (this.firstClick) {
+        this.firstClick = false; this.startTimer()
+        this.placeMines(r, c); this.calcNumbers()
+      } else if (this.mode === "chaos") {
+        this.chaosReshuffle(r, c)
+      }
+      this.revealCell(r, c); this.afterAction()
+    },
+
+    doFlag(r, c) {
+      var cell = this.board[r][c]
+      if (cell.flagged) { cell.flagged = false; this.flagCnt-- }
+      else { cell.flagged = true; this.flagCnt++ }
+      this.mineLeft = this.curMines - this.flagCnt
+    },
+
+    revealCell(sr, sc) {
+      var queue = [[sr, sc]]
+      while (queue.length > 0) {
+        var pos = queue.shift()
+        var cr = pos[0], cc = pos[1]
+        if (cr < 0 || cr >= this.rows || cc < 0 || cc >= this.cols) continue
+        var cell = this.board[cr][cc]
+        if (cell.revealed || cell.flagged) continue
+        cell.revealed = true
+        if (cell.mine) {
+          this.gameOver = true; this.hitR = cr; this.hitC = cc
+          this.revealAll(); this.stopTimer(); return
+        }
+        if (cell.num === 0) {
+          for (var dr = -1; dr <= 1; dr++)
+            for (var dc = -1; dc <= 1; dc++) {
+              if (dr === 0 && dc === 0) continue
+              queue.push([cr + dr, cc + dc])
+            }
+        }
+      }
+    },
+
+    revealAll() {
+      for (var r = 0; r < this.rows; r++)
+        for (var c = 0; c < this.cols; c++)
+          this.board[r][c].revealed = true
+    },
+
+    chaosReshuffle(r, c) {
+      for (var i = 0; i < this.rows; i++)
+        for (var j = 0; j < this.cols; j++) {
+          this.board[i][j].mine = false
+          if (!this.board[i][j].revealed) this.board[i][j].flagged = false
+        }
+      this.flagCnt = 0
+      var el = []
+      for (var i = 0; i < this.rows; i++)
+        for (var j = 0; j < this.cols; j++)
+          if (!this.board[i][j].revealed && !(i === r && j === c)) el.push([i, j])
+      var mn = Math.max(3, Math.floor(el.length * 0.10))
+      var mx = Math.min(25, Math.floor(el.length * 0.35))
+      if (mn > mx) mn = mx
+      var cnt = mn + Math.floor(Math.random() * (mx - mn + 1))
+      if (cnt > el.length) cnt = el.length
+      for (var i = el.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1))
+        var t = el[i]; el[i] = el[j]; el[j] = t
+      }
+      for (var i = 0; i < cnt; i++)
+        this.board[el[i][0]][el[i][1]].mine = true
+      this.curMines = cnt; this.mineLeft = cnt; this.calcNumbers()
+    },
+
+    afterAction() {
+      this.updateDisplay(); this.refreshBoard()
+      if (this.gameOver) {
+        this.lastResult = "lose"; this.lastTimer = this.timer
+      } else {
+        this.checkWin()
+        if (this.won) {
+          this.lastResult = "win"; this.lastTimer = this.timer
+          this.isNewRecord = this.checkRecordSilent()
+        }
+      }
+    },
+
+    checkWin() {
+      for (var r = 0; r < this.rows; r++)
+        for (var c = 0; c < this.cols; c++)
+          if (!this.board[r][c].revealed && !this.board[r][c].mine) return
+      this.won = true; this.stopTimer()
+    },
+
+    /* ---- DISPLAY ---- */
+    updateDisplay() {
+      for (var r = 0; r < this.rows; r++) {
+        for (var c = 0; c < this.cols; c++) {
+          var cell = this.board[r][c]
+          if (cell.revealed) {
+            if (cell.mine) {
+              cell.ch = "X"
+              cell.bg = (r === this.hitR && c === this.hitC) ? "#880000" : "#3a1010"
+              cell.tc = "#ff5555"
+            } else if (cell.num > 0) {
+              cell.ch = "" + cell.num; cell.bg = "#1e1e30"
+              cell.tc = NUM_CLR[cell.num] || "#fff"
+            } else {
+              cell.ch = ""; cell.bg = "#1e1e30"; cell.tc = "#c8d8f0"
+            }
+          } else if (cell.flagged) {
+            cell.ch = "F"; cell.bg = "#1a1a2e"; cell.tc = "#d5b35b"
+          } else if (this.cheatOn && this.mode !== "chaos" && cell.mine) {
+            cell.ch = "!"; cell.bg = "#2a1a1a"; cell.tc = "#d55b5b"
+          } else {
+            cell.ch = ""; cell.bg = "#1a1a2e"; cell.tc = "#c8d8f0"
+          }
+        }
+      }
+    },
+
+    refreshBoard() { this.board = cloneBoard(this.board) },
+
+    /* ---- CONTROLS ---- */
+    toggleFlag() { this.flagMode = !this.flagMode },
+    toggleCheat() {
+      if (this.mode === "chaos") return
+      this.cheatOn = !this.cheatOn
+      this.updateDisplay(); this.refreshBoard()
+    },
+
+    saveUndo() {
+      if (this.undoLeft <= 0) return
+      this.undoStack.push(cloneBoard(this.board)); this.undoLeft--
+    },
+
+    doUndo() {
+      if (this.undoStack.length === 0) return
+      this.board = this.undoStack.pop(); this.undoLeft++
+      if (this.gameOver || this.won) {
+        this.gameOver = false; this.won = false
+        this.lastResult = "none"; this.hitR = -1; this.hitC = -1
+        if (!this.firstClick) this.startTimer()
+      }
+      this.updateDisplay(); this.refreshBoard()
+    },
+
+    doRestart() {
+      this.commitResult()
+      if (this.isDaily && this.dailyDone) {
+        prompt.showToast({ message: "今日已完成", duration: 1500 })
+        this.view = "menu"; this.computeDisplay(); return
+      }
+      if (this.mode === "chaos") this.initGame(8, 8, 10, 28, 13)
+      else if (this.isDaily) this.initGame(8, 8, 10, 28, 13)
+      else { var d = DIFFS[this.diffIdx]; this.initGame(d.rows, d.cols, d.mines, d.cell, d.font) }
+    },
+
+    backMenu() {
+      this.commitResult(); this.stopTimer()
+      this.view = "menu"; this.computeDisplay()
+    },
+
+    /* ---- TIMER ---- */
+    startTimer() {
+      this.stopTimer()
+      var self = this
+      this.timerRef = setInterval(function () {
+        self.timer++; self.timerStr = "" + self.timer
       }, 1000)
     },
-    stopTimer: function() {
-      if (this.timerId) { clearInterval(this.timerId); this.timerId = null }
+    stopTimer() {
+      if (this.timerRef) { clearInterval(this.timerRef); this.timerRef = null }
     },
 
-    revealCell: function(row, col) {
-      if (this.gameState !== 'playing') return
-      var cell = this.grid[row][col]
-      if (!cell || cell.revealed || cell.flagged) return
-      if (cell.mine) { cell.revealed = true; cell.exploded = true; this.gameOver(); return }
-      var queue = [{ row: row, col: col }]
-      var visited = {}
-      visited[row + ',' + col] = true
-      while (queue.length > 0) {
-        var cur = queue.shift()
-        var c = this.grid[cur.row][cur.col]
-        if (c.revealed) continue
-        c.revealed = true
-        this.revealedCount++
-        if (c.adjacentMines > 0) continue
-        for (var dr = -1; dr <= 1; dr++) {
-          for (var dc = -1; dc <= 1; dc++) {
-            if (dr === 0 && dc === 0) continue
-            var nr = cur.row + dr, nc = cur.col + dc
-            if (nr < 0 || nr >= this.ROWS || nc < 0 || nc >= this.COLS) continue
-            var key = nr + ',' + nc
-            if (visited[key]) continue
-            visited[key] = true
-            var nb = this.grid[nr][nc]
-            if (!nb.revealed && !nb.flagged && !nb.mine) queue.push({ row: nr, col: nc })
-          }
+    /* ---- STATS ---- */
+    commitResult() {
+      if (this.lastResult === "win") {
+        this.stats.wins++; this.stats.streak++
+        if (this.stats.streak > this.stats.maxStreak) this.stats.maxStreak = this.stats.streak
+        if (this.mode === "chaos") this.stats.chaosWins = (this.stats.chaosWins || 0) + 1
+        else this.stats.classicWins = (this.stats.classicWins || 0) + 1
+        if (this.isDaily) {
+          this.stats.dailyDone = (this.stats.dailyDone || 0) + 1; this.saveDaily()
         }
+        this.stats.time += this.lastTimer
+        if (this.mode !== "chaos") {
+          var k = this.diffIdx === 0 ? "bestEasy" : (this.diffIdx === 2 ? "bestHard" : "bestNormal")
+          if (this.stats[k] === 0 || this.lastTimer < this.stats[k]) this.stats[k] = this.lastTimer
+        }
+        this.stats.total++; this.saveStats()
+      } else if (this.lastResult === "lose") {
+        this.stats.total++; this.stats.streak = 0
+        this.stats.time += this.lastTimer; this.saveStats()
       }
-      this.checkWin()
+      this.lastResult = "none"
     },
 
-    quickExpand: function(row, col) {
-      var cell = this.grid[row][col]
-      if (!cell.revealed || cell.adjacentMines === 0) return
-      var flags = 0, nbs = []
-      for (var dr = -1; dr <= 1; dr++) {
-        for (var dc = -1; dc <= 1; dc++) {
-          if (dr === 0 && dc === 0) continue
-          var nr = row + dr, nc = col + dc
-          if (nr >= 0 && nr < this.ROWS && nc >= 0 && nc < this.COLS) {
-            nbs.push({ row: nr, col: nc })
-            if (this.grid[nr][nc].flagged) flags++
-          }
-        }
-      }
-      if (flags !== cell.adjacentMines) return
-      var hit = false
-      for (var i = 0; i < nbs.length; i++) {
-        var nb = this.grid[nbs[i].row][nbs[i].col]
-        if (!nb.revealed && !nb.flagged) {
-          if (nb.mine) { nb.revealed = true; nb.exploded = true; hit = true }
-          else this.revealCell(nbs[i].row, nbs[i].col)
-        }
-      }
-      if (hit) this.gameOver()
+    checkRecordSilent() {
+      if (this.mode === "chaos") return false
+      var k = this.diffIdx === 0 ? "bestEasy" : (this.diffIdx === 2 ? "bestHard" : "bestNormal")
+      return this.stats[k] === 0 || this.timer < this.stats[k]
     },
 
-    checkWin: function() {
-      if (this.revealedCount === this.totalSafeCells) {
-        this.gameState = 'win'
-        this.faceSymbol = 'V'
-        this.statusMessage = '恭喜胜利！'
-        this.stopTimer()
-        for (var r = 0; r < this.ROWS; r++) {
-          for (var c = 0; c < this.COLS; c++) {
-            if (this.grid[r][c].mine && !this.grid[r][c].flagged) {
-              this.grid[r][c].flagged = true; this.flagCount++
-            }
-          }
-        }
-        this.remainingMines = 0
-        this.updateStatusCls()
-      }
+    saveStats() {
+      storage.set({ key: "ms_stats", value: JSON.stringify(this.stats) })
     },
 
-    gameOver: function() {
-      this.gameState = 'lose'
-      this.faceSymbol = 'X'
-      this.statusMessage = '踩雷了！点击X重试'
-      this.stopTimer()
-      for (var r = 0; r < this.ROWS; r++) {
-        for (var c = 0; c < this.COLS; c++) {
-          if (this.grid[r][c].mine) this.grid[r][c].revealed = true
-        }
-      }
-      this.updateStatusCls()
+    resetStats() {
+      this.stats = newStats(); this.saveStats(); this.computeDisplay()
+      prompt.showToast({ message: "已重置", duration: 1500 })
     },
 
-    goToAbout: function() {
-      router.push({ uri: 'about' })
+    saveDaily() {
+      storage.set({
+        key: "ms_daily",
+        value: JSON.stringify({ date: "" + daySeed(), time: this.timer })
+      })
+      this.dailyDone = true; this.dailyTime = this.timer
+      this.dailyText = "已完成 " + this.timer + "秒"
+    },
+
+    computeDisplay() {
+      var s = this.stats
+      this.winRate = s.total > 0 ? Math.round(s.wins / s.total * 100) : 0
+      this.totalTimeStr = fmtTime(s.time || 0)
+      this.bestEasyStr = s.bestEasy > 0 ? s.bestEasy + "秒" : "--"
+      this.bestNormalStr = s.bestNormal > 0 ? s.bestNormal + "秒" : "--"
+      this.bestHardStr = s.bestHard > 0 ? s.bestHard + "秒" : "--"
     }
   }
 </script>

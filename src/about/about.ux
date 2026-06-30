@@ -1,326 +1,204 @@
 <template>
   <div class="page">
-    <div class="top-row">
-      <text class="back-btn" onclick="goBack"><</text>
+
+    <div class="top">
+      <div class="bk" onclick="goBack()"><text class="bkt">&lt;</text></div>
+      <text class="ht">关于</text>
+      <div class="ph"></div>
     </div>
 
-    <div class="mode-row">
-      <div class="mode-btn" onclick="startClassic">
-        <text class="mode-btn-text">经典</text>
-      </div>
-      <div class="mode-btn mode-btn-formula" onclick="startFormula">
-        <text class="mode-btn-text">公式扫雷</text>
-      </div>
+    <div class="logo-circle">
+      <text class="logo-text">扫雷</text>
     </div>
 
-    <div class="card-area">
-      <text class="maker-text" onclick="onMakerTap">制作：tianry</text>
-      <text class="win-indicator" if="{{ winPlus }}">⚡ Win Plus 已开启</text>
-    </div>
+    <text class="app-name">扫雷</text>
+    <text class="ver">v2.0.0</text>
 
-    <div class="skin-row">
-      <div class="skin-btn" onclick="cycleSkin">
-        <text class="skin-btn-text">切换皮肤</text>
+    <div class="info-block">
+      <div class="info-row">
+        <text class="il">制作者</text>
+        <text class="iv">tianry</text>
       </div>
-      <text class="skin-label">{{ skinName }}</text>
-    </div>
-
-    <div class="card-area symbol-card">
-      <text class="card-title">符号说明</text>
-      <div class="symbol-row">
-        <text class="symbol">M</text>
-        <text class="desc">剩余地雷数</text>
+      <div class="info-row">
+        <text class="il">模式</text>
+        <text class="iv">经典 · 混乱 · 每日</text>
       </div>
-      <div class="symbol-row">
-        <text class="symbol">T</text>
-        <text class="desc">计时器</text>
+      <div class="info-row">
+        <text class="il">难度</text>
+        <text class="iv">简单 · 普通 · 困难</text>
       </div>
-      <div class="symbol-row">
-        <text class="symbol">O</text>
-        <text class="desc">游戏进行中</text>
-      </div>
-      <div class="symbol-row">
-        <text class="symbol">V</text>
-        <text class="desc">胜利</text>
-      </div>
-      <div class="symbol-row">
-        <text class="symbol">X</text>
-        <text class="desc">失败（踩雷）</text>
-      </div>
-      <div class="symbol-row">
-        <text class="symbol">F</text>
-        <text class="desc">旗帜标记</text>
-      </div>
-      <div class="symbol-row">
-        <text class="symbol">*</text>
-        <text class="desc">地雷</text>
-      </div>
-      <div class="symbol-row">
-        <text class="symbol">1-8</text>
-        <text class="desc">周围雷数（经典）</text>
-      </div>
-      <div class="symbol-row">
-        <text class="symbol" style="color: #d4a843;">√x</text>
-        <text class="desc">公式代替数字</text>
-      </div>
-      <div class="symbol-row">
-        <text class="symbol" style="color: #ff6b6b;">F ON</text>
-        <text class="desc">标雷模式</text>
+      <div class="info-row">
+        <text class="il">特色</text>
+        <text class="iv">撤销 · 统计 · 纪录</text>
       </div>
     </div>
 
-    <div class="card-area changelog-card">
-      <text class="card-title">更新日志</text>
-      <div class="log-block">
-        <text class="log-ver">v1.0.0</text>
-        <text class="log-item">+ 经典模式 9×9 / 公式模式</text>
-        <text class="log-item">+ 点击翻开 · 长按标雷 · 双击快排</text>
-        <text class="log-item">+ 四套皮肤：默认 / 黑客 / Win95 / 乱码</text>
-        <text class="log-item">+ 按三次署名有彩蛋</text>
-        <text class="log-item">+ 首击安全区 · 计时器 · 标雷开关</text>
-        <text class="log-item">+ 模式选择记忆，重启不丢失</text>
-      </div>
+    <text class="desc">经典扫雷与创新混乱模式
+      每日挑战全球同台竞技
+      手腕上的扫雷体验</text>
+
+    <text class="qr-title">如果觉得好玩
+      请作者喝杯奶茶</text>
+
+    <div class="qr-box">
+      <image class="qr-img" src="/common/qrcode.png"></image>
     </div>
 
-    <div class="card-area donate-card">
-      <text class="card-title">请作者喝杯咖啡</text>
-      <image src="/common/donate_qr.png" class="qr-image" />
-    </div>
+    <text class="qr-hint">截图扫码赞赏</text>
 
-    <div class="bottom-spacer"></div>
+    <text class="copy">Made with dedication</text>
+
   </div>
 </template>
 
 <style>
   .page {
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
+    position: absolute;
     width: 466px;
-    background-color: #12121f;
-    padding: 12px 0 10px;
-    box-sizing: border-box;
-  }
-
-  .top-row {
-    width: 380px;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    margin-bottom: 10px;
-  }
-  .back-btn {
-    width: 44px;
-    height: 44px;
-    font-size: 26px;
-    color: #8899bb;
-    text-align: center;
-    line-height: 44px;
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 22px;
-  }
-
-  .mode-row {
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 12px;
-  }
-  .mode-btn {
-    height: 36px;
-    padding: 0 18px;
-    background-color: rgba(255, 255, 255, 0.06);
-    border-radius: 18px;
-    align-items: center;
-    justify-content: center;
-    margin: 0 6px;
-  }
-  .mode-btn-formula {
-    background-color: rgba(212, 168, 67, 0.18);
-  }
-  .mode-btn-text {
-    font-size: 13px;
-    font-weight: 600;
-    color: #8899bb;
-  }
-  .mode-btn-formula .mode-btn-text {
-    color: #d4a843;
-  }
-
-  .card-area {
-    width: 380px;
-    border-radius: 14px;
-    background-color: rgba(255, 255, 255, 0.04);
+    height: 466px;
+    border-radius: 233px;
+    background-color: #000000;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 12px 14px;
-    box-sizing: border-box;
-    margin-bottom: 10px;
-  }
-  .maker-text {
-    font-size: 16px;
-    color: #c8d8f0;
-  }
-  .win-indicator {
-    font-size: 11px;
-    color: #d4a843;
-    margin-top: 4px;
+    overflow: hidden;
   }
 
-  .skin-row {
-    width: 380px;
+  .top {
+    width: 260px;
     flex-direction: row;
     align-items: center;
-    justify-content: center;
-    margin-bottom: 10px;
+    justify-content: space-between;
+    margin-bottom: 4px;
   }
-  .skin-btn {
+  .bk {
+    width: 30px;
     height: 30px;
-    padding: 0 14px;
-    background-color: rgba(255, 255, 255, 0.06);
+    background-color: #1a1a2e;
     border-radius: 15px;
     align-items: center;
     justify-content: center;
   }
-  .skin-btn-text {
-    font-size: 12px;
-    font-weight: 600;
-    color: #8899bb;
+  .ph {
+    width: 30px;
+    height: 30px;
   }
-  .skin-label {
-    font-size: 12px;
-    color: #d4a843;
-    margin-left: 10px;
+  .bkt {
+    font-size: 14px;
+    font-weight: 700;
+    color: #667799;
+  }
+  .ht {
+    font-size: 14px;
+    font-weight: 700;
+    color: #c8d8f0;
   }
 
-  .symbol-card {
-    align-items: flex-start;
+  .logo-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
+    background-color: rgba(213, 91, 91, 0.15);
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
   }
-  .card-title {
-    font-size: 14px;
-    font-weight: bold;
-    color: #c8d8f0;
-    text-align: center;
-    width: 100%;
-    margin-bottom: 8px;
+  .logo-text {
+    font-size: 13px;
+    font-weight: 700;
+    color: #d55b5b;
   }
-  .symbol-row {
+
+  .app-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #e8e8f0;
+    margin-bottom: 1px;
+  }
+  .ver {
+    font-size: 10px;
+    color: #556677;
+    margin-bottom: 6px;
+  }
+
+  .info-block {
+    width: 240px;
+    flex-direction: column;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 12px;
+    padding-right: 12px;
+    margin-bottom: 6px;
+  }
+  .info-row {
     flex-direction: row;
     align-items: center;
+    justify-content: space-between;
     margin-bottom: 3px;
   }
-  .symbol {
-    width: 44px;
-    font-size: 14px;
-    font-weight: 700;
-    color: #c8d8f0;
-    text-align: center;
+  .il {
+    font-size: 10px;
+    color: #556677;
+    width: 50px;
   }
+  .iv {
+    font-size: 10px;
+    font-weight: 600;
+    color: #aabbcc;
+    text-align: right;
+    flex: 1;
+  }
+
   .desc {
-    font-size: 12px;
-    color: #8899bb;
-    margin-left: 8px;
+    font-size: 10px;
+    color: #667799;
+    text-align: center;
+    margin-bottom: 6px;
+    lines: 3;
   }
 
-  .changelog-card {
-    align-items: flex-start;
+  .qr-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #d5b35b;
+    text-align: center;
+    margin-bottom: 4px;
   }
-  .log-block {
-    width: 100%;
-    flex-direction: column;
-  }
-  .log-ver {
-    font-size: 12px;
-    font-weight: 700;
-    color: #5b9bd5;
+
+  .qr-box {
+    width: 72px;
+    height: 72px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    align-items: center;
+    justify-content: center;
     margin-bottom: 3px;
   }
-  .log-item {
-    font-size: 11px;
-    color: #8899bb;
-    margin-bottom: 2px;
+  .qr-img {
+    width: 64px;
+    height: 64px;
   }
 
-  .donate-card {
-    padding: 14px 14px 18px;
-  }
-  .qr-image {
-    width: 140px;
-    height: 140px;
-    margin-top: 6px;
-    border-radius: 10px;
+  .qr-hint {
+    font-size: 9px;
+    color: #334455;
+    margin-bottom: 4px;
   }
 
-  .bottom-spacer {
-    height: 12px;
+  .copy {
+    font-size: 8px;
+    color: #222233;
   }
 </style>
 
 <script>
   import router from '@system.router'
-  import storage from '@system.storage'
-  import prompt from '@system.prompt'
 
   export default {
-    data: {
-      winPlus: false,
-      tapCount: 0,
-      lastTapTime: 0,
-      currentSkin: 0,
-      skinName: '默认',
-      skinNames: ['默认', 'Number Project', 'Ancient 95', 'Word User Interface']
-    },
-
-    onShow() {
-      storage.get({
-        key: 'winPlus',
-        success: (d) => { this.winPlus = (d === 'true') }
-      })
-      storage.get({
-        key: 'skin',
-        success: (d) => {
-          this.currentSkin = parseInt(d) || 0
-          this.skinName = this.skinNames[this.currentSkin]
-        }
-      })
-    },
-
-    goBack() { router.back() },
-
-    startClassic() {
-      storage.set({ key: 'formulaMode', value: 'false' })
+    goBack() {
       router.back()
-    },
-    startFormula() {
-      storage.set({ key: 'formulaMode', value: 'true' })
-      router.back()
-    },
-
-    onMakerTap() {
-      var now = Date.now()
-      if (now - this.lastTapTime > 1500) { this.tapCount = 0 }
-      this.tapCount++
-      this.lastTapTime = now
-      if (this.tapCount >= 3) {
-        this.tapCount = 0
-        if (this.winPlus) {
-          this.winPlus = false
-          storage.set({ key: 'winPlus', value: 'false' })
-          prompt.showToast({ message: 'Normal Plus 一切正常', duration: 2000 })
-        } else {
-          this.winPlus = true
-          storage.set({ key: 'winPlus', value: 'true' })
-          prompt.showToast({ message: 'Win Plus 我们赢了', duration: 2000 })
-        }
-      }
-    },
-
-    cycleSkin() {
-      this.currentSkin = (this.currentSkin + 1) % 4
-      this.skinName = this.skinNames[this.currentSkin]
-      storage.set({ key: 'skin', value: String(this.currentSkin) })
-      prompt.showToast({ message: '皮肤：' + this.skinName, duration: 1500 })
     }
   }
 </script>
